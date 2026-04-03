@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hotel Price Comparison — Best Deal Finder</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg2: #f7f7f5;
+    --bg3: #f0efe9;
+    --text: #1a1a1a;
+    --text2: #666660;
+    --text3: #999993;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --green-dark: #0F6E56;
+    --amber: #854F0B;
+    --amber-light: #FAEEDA;
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --purple-light: #CECBF6;
+    --purple-dark: #3C3489;
+    --red-light: #FCEBEB;
+    --red-dark: #A32D2D;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg2: #252523;
+      --bg3: #2e2e2b;
+      --text: #f0efe9;
+      --text2: #a0a09a;
+      --text3: #68685f;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.2);
+      --green-light: #0a3326;
+      --green-dark: #5dcaa5;
+      --amber-light: #2e1f05;
+      --amber: #ef9f27;
+      --blue-light: #0a2240;
+      --blue: #85b7eb;
+      --purple-light: #2a2550;
+      --purple-dark: #afa9ec;
+      --red-light: #2d0f0f;
+      --red-dark: #f09595;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg3);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    line-height: 1.5;
+  }
+
+  .wrapper {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 2rem;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .header p {
+    font-size: 14px;
+    color: var(--text2);
+  }
+  .live-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Panels */
+  .panel {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .panel-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 2px 9px;
+    border-radius: 99px;
+    font-weight: 500;
+  }
+  .badge-green { background: var(--green-light); color: var(--green-dark); }
+  .badge-blue  { background: var(--blue-light);  color: var(--blue); }
+
+  /* Search grid */
+  .search-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+  @media (max-width: 600px) {
+    .search-grid { grid-template-columns: 1fr 1fr; }
+    .search-grid .field:first-child { grid-column: span 2; }
+    .search-grid button { grid-column: span 2; }
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 4px;
+  }
+  .field input {
+    width: 100%;
+    padding: 9px 11px;
+    font-size: 14px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: var(--green); }
+
+  /* Autocomplete */
+  .suggestions { position: relative; }
+  .suggest-list {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0; right: 0;
+    background: var(--bg);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    z-index: 50;
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    display: none;
+  }
+  .suggest-item {
+    padding: 9px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .suggest-item:last-child { border-bottom: none; }
+  .suggest-item:hover { background: var(--bg2); }
+  .suggest-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* Buttons */
+  .btn-primary {
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius);
+    padding: 9px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Card picker */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px;
+  }
+  .card-tile {
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 11px 13px;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none;
+  }
+  .card-tile:hover { border-color: var(--green); }
+  .card-tile.on { border: 2px solid var(--green); background: var(--green-light); }
+  .card-check {
+    display: none;
+    position: absolute;
+    top: 9px; right: 9px;
+    width: 17px; height: 17px;
+    background: var(--green);
+    border-radius: 50%;
+  }
+  .card-check::after {
+    content: '';
+    position: absolute;
+    left: 4px; top: 2px;
+    width: 5px; height: 9px;
+    border: 2px solid white;
+    border-top: none; border-left: none;
+    transform: rotate(45deg);
+  }
+  .card-tile.on .card-check { display: block; }
+  .card-name { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 3px; padding-right: 22px; }
+  .card-earn { font-size: 12px; color: var(--green-dark); font-weight: 500; }
+  .card-note { font-size: 11px; color: var(--text3); margin-top: 3px; line-height: 1.4; }
+  .card-type { font-size: 10px; color: var(--text3); margin-top: 5px; padding-top: 5px; border-top: 0.5px solid var(--border); }
+
+  /* My Offers panel */
+  .offers-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  .offer-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+  }
+  @media (max-width: 600px) {
+    .offer-row { grid-template-columns: 1fr 1fr; }
+    .offer-row .offer-del { grid-column: span 2; text-align: right; }
+  }
+  .offer-row input, .offer-row select {
+    padding: 7px 10px;
+    font-size: 13px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    width: 100%;
+  }
+  .offer-del {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text3);
+    padding: 4px 8px;
+    border-radius: var(--radius);
+  }
+  .offer-del:hover { color: var(--red-dark); background: var(--red-light); }
+  .btn-secondary {
+    background: var(--bg2);
+    color: var(--text);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 7px 14px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-secondary:hover { background: var(--bg3); }
+  .offers-hint { font-size: 12px; color: var(--text3); margin-top: 8px; line-height: 1.5; }
+
+  /* Toggles */
+  .toggles-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  .toggle-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text2);
+    cursor: pointer;
+    user-select: none;
+  }
+  .tp {
+    width: 34px; height: 18px;
+    border-radius: 9px;
+    background: var(--green);
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .tp.off { background: var(--border2); }
+  .td {
+    position: absolute;
+    top: 2px; right: 2px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: white;
+    transition: right 0.15s;
+  }
+  .tp.off .td { right: 18px; }
+
+  /* Results */
+  .hotel-bar {
+    background: var(--bg2);
+    border-radius: var(--radius);
+    padding: 9px 14px;
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .hotel-bar strong { color: var(--text); font-weight: 500; }
+
+  .col-hdr {
+    display: grid;
+    grid-template-columns: 26px 1.5fr 0.85fr 0.85fr 1fr 0.9fr 1fr;
+    gap: 8px;
+    padding: 0 14px;
+    margin-bottom: 6px;
+  }
+  .ch {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .ch.r { text-align: right; }
+  @media (max-width: 640px) {
+    .col-hdr { display: none; }
+  }
+
+  .result-row {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 11px 14px;
+    margin-bottom: 8px;
+    display: grid;
+    grid-template-columns: 26px 1.5fr 0.85fr 0.85fr 1fr 0.9fr 1fr;
+    align-items: center;
+    gap: 8px;
+    transition: border-color 0.15s;
+  }
+  .result-row:hover { border-color: var(--border2); }
+  .result-row.best { border: 2px solid var(--green); }
+  @media (max-width: 640px) {
+    .result-row {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto;
+    }
+    .result-row .rk { display: none; }
+    .result-row .site-col { grid-column: span 2; }
+  }
+
+  .rk { font-size: 13px; font-weight: 500; color: var(--text3); text-align: center; }
+  .rk.gold { color: #BA7517; }
+  .site-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .site-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .top-badge { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 99px; background: var(--green-light); color: var(--green-dark); margin-left: 6px; }
+  .cell-r { text-align: right; font-size: 13px; color: var(--text); }
+
+  .pill { display: inline-block; font-size: 11px; padding: 3px 8px; border-radius: 99px; font-weight: 500; }
+  .pill-green { background: var(--green-light); color: var(--green-dark); }
+  .pill-blue  { background: var(--blue-light);  color: var(--blue); }
+  .pill-purple{ background: var(--purple-light); color: var(--purple-dark); }
+  .pill-none  { background: var(--bg2); color: var(--text3); }
+  .pill a { color: inherit; text-decoration: none; }
+  .pill a:hover { text-decoration: underline; }
+
+  .net-price { text-align: right; font-size: 15px; font-weight: 600; color: var(--text); }
+  .net-price.best { color: var(--green-dark); }
+
+  /* Info bars */
+  .info-bar {
+    border-radius: var(--radius);
+    padding: 11px 16px;
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .info-bar.green { background: var(--green-light); color: var(--green-dark); }
+  .info-bar.amber { background: var(--amber-light); color: var(--amber); }
+  .info-bar.red   { background: var(--red-light);   color: var(--red-dark); }
+
+  /* Status */
+  .status-msg { font-size: 13px; color: var(--text2); padding: 1.25rem 0; display: flex; align-items: center; gap: 10px; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--text); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Footer */
+  .results-footer {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 0.5px solid var(--border);
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 1.7;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+  .chip {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 99px;
+    border: 0.5px solid var(--border2);
+    color: var(--text2);
+    background: var(--bg2);
+  }
+  .chip a { color: inherit; text-decoration: none; }
+  .chip a:hover { text-decoration: underline; }
+
+  .portal-link { color: var(--amber); cursor: pointer; text-decoration: underline; }
+  .section-divider { height: 0.5px; background: var(--border); margin: 1rem 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="header">
+    <h1><span class="live-dot"></span>Hotel Price Comparison</h1>
+    <p>Live prices · TopCashback rates · Amex card points · Your active offers — all in one place</p>
+  </div>
+
+  <!-- 1. Search -->
+  <div class="panel">
+    <div class="panel-title">Find a hotel <span class="badge badge-green">Live prices via Xotelo</span></div>
+    <div class="search-grid">
+      <div class="field suggestions">
+        <label>Hotel name</label>
+        <input type="text" id="hIn" placeholder="e.g. The Savoy, London" autocomplete="off" oninput="onType()" />
+        <div class="suggest-list" id="sugg"></div>
+      </div>
+      <div class="field"><label>Check-in</label><input type="date" id="cin" /></div>
+      <div class="field"><label>Check-out</label><input type="date" id="cout" /></div>
+      <div class="field"><button class="btn-primary" id="goBtn" onclick="go()" disabled>Search prices</button></div>
+    </div>
+  </div>
+
+  <!-- 2. Amex card picker -->
+  <div class="panel">
+    <div class="panel-title">Your Amex cards <span class="badge badge-blue">Points earned per booking</span></div>
+    <div class="cards-grid" id="cardGrid"></div>
+    <div style="margin-top:10px; font-size:11px; color:var(--text3);">
+      Earn rates shown for hotel bookings. MR points valued at 1.6¢ each (NerdWallet 2026 baseline). Blue Cash cards earn Reward Dollars (cash back), not transferable MR points.
+    </div>
+  </div>
+
+  <!-- 3. My Active Offers -->
+  <div class="panel">
+    <div class="panel-title">My active Amex Offers <span class="badge badge-blue">Manual entry</span></div>
+    <div class="offers-list" id="offersList"></div>
+    <button class="btn-secondary" onclick="addOffer()">+ Add offer</button>
+    <div class="offers-hint">
+      Enter offers from your Amex account (e.g. "Spend $200 at Hotels.com, get $40 back"). The app will apply them automatically when that site appears in results.<br>
+      <strong>Tip:</strong> Find your offers at <a href="https://americanexpress.com/en-us/benefits/offers" target="_blank" style="color:var(--amber)">americanexpress.com/offers</a>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div id="statusArea"></div>
+
+  <!-- Results -->
+  <div id="resultsArea" style="display:none;">
+    <div class="hotel-bar" id="hotelBar"></div>
+
+    <div class="toggles-row">
+      <div style="font-size:13px; color:var(--text2); flex:1;" id="rLabel"></div>
+      <div class="toggle-item" onclick="tog('cb')">
+        <div class="tp" id="tpCB"><div class="td"></div></div>
+        <span>Cashback</span>
+      </div>
+      <div class="toggle-item" onclick="tog('pts')">
+        <div class="tp" id="tpPts"><div class="td"></div></div>
+        <span>Card points</span>
+      </div>
+      <div class="toggle-item" onclick="tog('offers')">
+        <div class="tp" id="tpOffers"><div class="td"></div></div>
+        <span>Amex Offers</span>
+      </div>
+    </div>
+
+    <div class="col-hdr">
+      <div class="ch">#</div>
+      <div class="ch">Booking site</div>
+      <div class="ch r">Total</div>
+      <div class="ch r">Cashback</div>
+      <div class="ch r">Card points</div>
+      <div class="ch r">Amex Offer</div>
+      <div class="ch r">Net price</div>
+    </div>
+
+    <div id="rows"></div>
+
+    <div class="info-bar green" id="saveBar" style="display:none;"></div>
+    <div class="info-bar amber" id="warnBar" style="display:none;"></div>
+
+    <div class="results-footer" id="footer" style="display:none;">
+      <strong>Cashback rates verified Apr 3, 2026</strong>
+      <div class="chips">
+        <div class="chip"><a href="https://www.topcashback.com/expedia/" target="_blank">Expedia 6% TCB</a></div>
+        <div class="chip"><a href="https://www.topcashback.com/booking-com/" target="_blank">Booking.com 7% TCB</a></div>
+        <div class="chip"><a href="https://www.topcashback.com/hotels-com/" target="_blank">Hotels.com 12% TCB (new customers)</a></div>
+        <div class="chip"><a href="https://www.topcashback.com/priceline/" target="_blank">Priceline up to 9% TCB</a></div>
+        <div class="chip"><a href="https://www.topcashback.com/agoda/" target="_blank">Agoda ~4% TCB</a></div>
+      </div>
+      <strong>Amex earn rates</strong> — verified from AmEx.com · Platinum: 5x via AmexTravel.com, 1x direct · Gold: 2x via AmexTravel.com, 1x direct · Green: 3x all travel · Blue Cash: 1% cash back<br>
+      <strong>Points values</strong> — NerdWallet 2026 baseline: 1.6¢/MR point<br><br>
+      Prices are live from Xotelo (TripAdvisor-sourced). Always verify cashback rates and card offers before booking. Check hotel price in a private/incognito window before clicking through any cashback portal.
+    </div>
+  </div>
+
+</div><!-- /wrapper -->
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+
+const CASHBACK = {
+  "Expedia":     { pct:.06, label:"TCB 6%",  url:"https://www.topcashback.com/expedia/" },
+  "Booking.com": { pct:.07, label:"TCB 7%",  url:"https://www.topcashback.com/booking-com/" },
+  "Hotels.com":  { pct:.12, label:"TCB 12%", url:"https://www.topcashback.com/hotels-com/" },
+  "Priceline":   { pct:.09, label:"TCB 9%",  url:"https://www.topcashback.com/priceline/" },
+  "Agoda":       { pct:.04, label:"TCB ~4%", url:"https://www.topcashback.com/agoda/" },
+  "Trip.com":    { pct:.03, label:"TCB ~3%", url:"https://www.topcashback.com/trip-com/" },
+};
+
+const SITE_META = {
+  "Expedia":     "One Key rewards on every stay",
+  "Booking.com": "Free cancellation on most rooms",
+  "Hotels.com":  "12% cashback for new customers via TCB",
+  "Priceline":   "Express Deals available",
+  "Agoda":       "AgodaCash rewards included",
+  "Trip.com":    "Trip Coins on every booking",
+};
+
+// Amex cards — earn rates verified from AmEx.com, values from NerdWallet 2026
+const AMEX_CARDS = [
+  { id:"plat",  name:"Amex Platinum",        directPts:1, portalPts:5, type:"MR",   cpp:1.6, fee:895, note:"5x via AmexTravel.com · 1x direct/OTA" },
+  { id:"gold",  name:"Amex Gold",             directPts:1, portalPts:2, type:"MR",   cpp:1.6, fee:325, note:"2x via AmexTravel.com · 1x direct/OTA" },
+  { id:"green", name:"Amex Green",            directPts:3, portalPts:3, type:"MR",   cpp:1.6, fee:150, note:"3x on all travel including hotels" },
+  { id:"bcp",   name:"Blue Cash Preferred",   directPts:1, portalPts:1, type:"cash", cpp:1.0, fee:95,  note:"1% cash back on hotels (Reward Dollars)" },
+  { id:"bce",   name:"Blue Cash Everyday",    directPts:1, portalPts:1, type:"cash", cpp:1.0, fee:0,   note:"1% cash back on hotels · no annual fee" },
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+
+let selectedCards = new Set(["plat","gold"]);
+let usePortal = false;
+let cbOn = true, ptsOn = true, offersOn = true;
+let results = [];
+let hotel = null;
+let offers = []; // { site, spendThreshold, saving }
+let stTimer;
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+(function init() {
+  const t = new Date();
+  const ci = new Date(t); ci.setDate(ci.getDate()+30);
+  const co = new Date(ci); co.setDate(co.getDate()+3);
+  const f = d => d.toISOString().split('T')[0];
+  document.getElementById('cin').value = f(ci);
+  document.getElementById('cout').value = f(co);
+  renderCards();
+  renderOffers();
+})();
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.suggestions')) hideSugg();
+});
+
+// ── SEARCH ────────────────────────────────────────────────────────────────────
+
+async function onType() {
+  const q = document.getElementById('hIn').value.trim();
+  hotel = null;
+  document.getElementById('goBtn').disabled = true;
+  hideSugg();
+  clearTimeout(stTimer);
+  if (q.length < 3) return;
+  stTimer = setTimeout(() => fetchSugg(q), 400);
+}
+
+async function fetchSugg(q) {
+  try {
+    const r = await fetch(`https://data.xotelo.com/api/search?query=${encodeURIComponent(q)}&location_type=accommodation`);
+    const d = await r.json();
+    if (!d.error && d.result?.list) showSugg(d.result.list.slice(0,7));
+  } catch(e) {}
+}
+
+function showSugg(list) {
+  const el = document.getElementById('sugg');
+  if (!list.length) { hideSugg(); return; }
+  el.innerHTML = list.map((h,i) =>
+    `<div class="suggest-item" onclick="pickHotel(${i})">
+      <div>${h.name}</div>
+      <div class="suggest-sub">${h.short_place_name||h.place_name||''}</div>
+    </div>`
+  ).join('');
+  el._h = list;
+  el.style.display = 'block';
+}
+
+function hideSugg() { document.getElementById('sugg').style.display = 'none'; }
+
+function pickHotel(i) {
+  const el = document.getElementById('sugg');
+  hotel = el._h[i];
+  document.getElementById('hIn').value = hotel.name;
+  hideSugg();
+  document.getElementById('goBtn').disabled = false;
+}
+
+async function go() {
+  if (!hotel) return;
+  const ci = document.getElementById('cin').value;
+  const co = document.getElementById('cout').value;
+  if (!ci || !co || ci >= co) {
+    showStatus('Please check your dates — check-out must be after check-in.', 'err');
+    return;
+  }
+  document.getElementById('resultsArea').style.display = 'none';
+  showStatus('Fetching live prices from Booking.com, Expedia, Hotels.com and more...', 'loading');
+  try {
+    const r = await fetch(`https://data.xotelo.com/api/rates?hotel_key=${hotel.hotel_key}&chk_in=${ci}&chk_out=${co}&currency=USD`);
+    const d = await r.json();
+    if (d.error) { showStatus(`API error: ${d.error}`, 'err'); return; }
+    if (!d.result?.rates?.length) { showStatus('No prices found for these dates. Try adjusting your dates or searching a different hotel.', 'err'); return; }
+    clearStatus();
+    buildResults(d.result.rates, ci, co);
+  } catch(e) {
+    showStatus('Could not reach the live pricing API. Make sure you are connected to the internet and try again. (CORS restrictions may apply if running locally — upload to a web server for full functionality.)', 'err');
+  }
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('statusArea');
+  if (type === 'loading') {
+    el.innerHTML = `<div class="status-msg"><div class="spinner"></div>${msg}</div>`;
+  } else {
+    el.innerHTML = `<div class="info-bar ${type==='err'?'red':'green'}">${msg}</div>`;
+  }
+}
+function clearStatus() { document.getElementById('statusArea').innerHTML=''; }
+
+// ── RESULTS ───────────────────────────────────────────────────────────────────
+
+function buildResults(rates, ci, co) {
+  const nights = Math.max(1, Math.round((new Date(co)-new Date(ci))/86400000));
+  results = rates.map(r => {
+    const cb = CASHBACK[r.name] || {pct:0,label:null,url:null};
+    const total = +(r.rate * nights).toFixed(2);
+    const cashback = +(total * cb.pct).toFixed(2);
+    return { name:r.name, meta:SITE_META[r.name]||'Check site for details', total, cb:cb.pct, cbLabel:cb.label, cbUrl:cb.url, cashback };
+  });
+
+  const nl = nights === 1 ? '1 night' : `${nights} nights`;
+  document.getElementById('hotelBar').innerHTML =
+    `<strong>${hotel.name}</strong><span>·</span>
+     <span>${hotel.short_place_name||hotel.place_name||''}</span><span>·</span>
+     <span>${nl}</span>`;
+  document.getElementById('rLabel').textContent = `${results.length} booking sites · live prices`;
+  document.getElementById('resultsArea').style.display = 'block';
+  renderRows();
+}
+
+function getBestCard(total) {
+  const active = AMEX_CARDS.filter(c => selectedCards.has(c.id));
+  if (!active.length) return null;
+  return active.reduce((best, c) => {
+    const pts = usePortal ? c.portalPts : c.directPts;
+    const bpts = usePortal ? best.portalPts : best.directPts;
+    return (pts * c.cpp) > (bpts * best.cpp) ? c : best;
+  });
+}
+
+function getMatchingOffer(siteName) {
+  return offers.find(o => o.site && siteName.toLowerCase().includes(o.site.toLowerCase()) && o.saving > 0);
+}
+
+function computeNet(r) {
+  const cb = cbOn ? r.cashback : 0;
+  let ptVal = 0;
+  if (ptsOn) {
+    const best = getBestCard(r.total);
+    if (best) {
+      const pts = usePortal ? best.portalPts : best.directPts;
+      ptVal = (pts * best.cpp / 100) * r.total;
+    }
+  }
+  let offerVal = 0;
+  if (offersOn) {
+    const offer = getMatchingOffer(r.name);
+    if (offer && r.total >= offer.spendThreshold) offerVal = offer.saving;
+  }
+  return +(r.total - cb - ptVal - offerVal).toFixed(2);
+}
+
+function renderRows() {
+  const sorted = [...results].sort((a,b) => computeNet(a) - computeNet(b));
+  const best = sorted[0];
+  const worst = sorted[sorted.length-1];
+
+  document.getElementById('rows').innerHTML = sorted.map((r,i) => {
+    const isBest = i === 0;
+    const net = computeNet(r);
+    const bestCard = ptsOn ? getBestCard(r.total) : null;
+    const offer = offersOn ? getMatchingOffer(r.name) : null;
+    const offerApplies = offer && r.total >= offer.spendThreshold;
+
+    // cashback cell
+    const cbCell = cbOn && r.cbLabel
+      ? `<span class="pill pill-green"><a href="${r.cbUrl}" target="_blank">${r.cbLabel}</a></span>`
+      : `<span class="pill pill-none">—</span>`;
+
+    // card points cell
+    let ptsCell = `<span class="pill pill-none">—</span>`;
+    if (ptsOn && bestCard && selectedCards.size > 0) {
+      const pts = usePortal ? bestCard.portalPts : bestCard.directPts;
+      const earned = Math.round(pts * r.total);
+      const label = bestCard.type === 'MR'
+        ? `${earned.toLocaleString()} MR pts`
+        : `${pts}% cash back`;
+      ptsCell = `<span class="pill pill-blue" title="${bestCard.name}: ${pts}x on hotels · ${bestCard.note}">${label}</span>`;
+    } else if (ptsOn && selectedCards.size === 0) {
+      ptsCell = `<span class="pill pill-none">no card</span>`;
+    }
+
+    // offer cell
+    let offerCell = `<span class="pill pill-none">—</span>`;
+    if (offersOn && offer) {
+      offerCell = offerApplies
+        ? `<span class="pill pill-purple">−$${offer.saving.toFixed(2)}</span>`
+        : `<span class="pill pill-none" title="Spend $${offer.spendThreshold} to qualify">Need $${offer.spendThreshold}</span>`;
+    }
+
+    return `<div class="result-row${isBest?' best':''}">
+      <div class="rk${isBest?' gold':''}">${isBest?'★':i+1}</div>
+      <div class="site-col">
+        <div class="site-name">${r.name}${isBest?`<span class="top-badge">Best deal</span>`:''}</div>
+        <div class="site-meta">${r.meta}</div>
+      </div>
+      <div class="cell-r">$${r.total.toFixed(2)}</div>
+      <div class="cell-r">${cbCell}</div>
+      <div class="cell-r">${ptsCell}</div>
+      <div class="cell-r">${offerCell}</div>
+      <div class="net-price${isBest?' best':''}">$${net.toFixed(2)}</div>
+    </div>`;
+  }).join('');
+
+  // savings bar
+  const saved = computeNet(worst) - computeNet(best);
+  const sb = document.getElementById('saveBar');
+  if (saved > 0.5) {
+    sb.style.display='block';
+    const parts = [];
+    if (cbOn && best.cashback > 0) parts.push(`$${best.cashback.toFixed(2)} TopCashback`);
+    if (ptsOn) {
+      const bc = getBestCard(best.total);
+      if (bc) {
+        const pts = usePortal ? bc.portalPts : bc.directPts;
+        const earned = Math.round(pts * best.total);
+        const val = ((pts * bc.cpp / 100) * best.total).toFixed(2);
+        parts.push(`${earned.toLocaleString()} MR pts (~$${val}) via ${bc.name}`);
+      }
+    }
+    if (offersOn) {
+      const o = getMatchingOffer(best.name);
+      if (o && best.total >= o.spendThreshold) parts.push(`$${o.saving.toFixed(2)} Amex Offer`);
+    }
+    sb.innerHTML = `<strong>Book with ${best.name}</strong> to save <strong>$${saved.toFixed(2)}</strong> vs. the most expensive option${parts.length?' — stacking: '+parts.join(' + '):''}.`;
+  } else { sb.style.display='none'; }
+
+  // warning bar
+  const wb = document.getElementById('warnBar');
+  wb.style.display = (cbOn||ptsOn||offersOn) ? 'block' : 'none';
+  wb.innerHTML = `⚠ Some booking sites show higher prices when accessed via a cashback portal. Always check the price in a private/incognito window first to confirm you're genuinely saving.
+    ${!usePortal
+      ? ` · <span class="portal-link" onclick="setPortal(true)">Show Amex portal rates (higher points for Platinum & Gold)</span>`
+      : ` · <span class="portal-link" onclick="setPortal(false)">Show direct booking rates</span>`}`;
+
+  document.getElementById('footer').style.display = 'block';
+}
+
+// ── CARDS ─────────────────────────────────────────────────────────────────────
+
+function renderCards() {
+  document.getElementById('cardGrid').innerHTML = AMEX_CARDS.map(c => {
+    const pts = usePortal ? c.portalPts : c.directPts;
+    const earn = c.type === 'MR' ? `${pts}x MR points per $ on hotels` : `${pts}% cash back on hotels`;
+    const on = selectedCards.has(c.id);
+    return `<div class="card-tile${on?' on':''}" onclick="toggleCard('${c.id}')">
+      <div class="card-check"></div>
+      <div class="card-name">${c.name}</div>
+      <div class="card-earn">${earn}</div>
+      <div class="card-note">${c.note}</div>
+      <div class="card-type">${c.type==='MR'?'Membership Rewards':'Reward Dollars'} · $${c.fee}/yr</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCard(id) {
+  selectedCards.has(id) ? selectedCards.delete(id) : selectedCards.add(id);
+  renderCards();
+  if (results.length) renderRows();
+}
+
+function setPortal(val) {
+  usePortal = val;
+  renderCards();
+  if (results.length) renderRows();
+}
+
+// ── OFFERS ────────────────────────────────────────────────────────────────────
+
+const KNOWN_SITES = ["Booking.com","Expedia","Hotels.com","Priceline","Agoda","Trip.com","Marriott","Hilton","Hyatt","IHG"];
+
+function renderOffers() {
+  const el = document.getElementById('offersList');
+  if (!offers.length) {
+    el.innerHTML = `<div style="font-size:13px; color:var(--text3); font-style:italic;">No offers added yet. Click "+ Add offer" below.</div>`;
+    return;
+  }
+  el.innerHTML = offers.map((o,i) => `
+    <div class="offer-row">
+      <select onchange="updateOffer(${i},'site',this.value)">
+        <option value="">Select site...</option>
+        ${KNOWN_SITES.map(s=>`<option value="${s}"${o.site===s?' selected':''}>${s}</option>`).join('')}
+      </select>
+      <div style="display:flex; gap:6px;">
+        <div style="flex:1;">
+          <input type="number" placeholder="Spend $" value="${o.spendThreshold||''}" min="0" onchange="updateOffer(${i},'spendThreshold',+this.value)" style="width:100%;" />
+        </div>
+        <div style="flex:1;">
+          <input type="number" placeholder="Save $" value="${o.saving||''}" min="0" step="0.01" onchange="updateOffer(${i},'saving',+this.value)" style="width:100%;" />
+        </div>
+      </div>
+      <div style="font-size:12px; color:var(--text2); white-space:nowrap;">
+        ${o.site && o.spendThreshold && o.saving ? `Spend $${o.spendThreshold} → save $${o.saving}` : 'Fill in all fields'}
+      </div>
+      <button class="offer-del offer-del" onclick="removeOffer(${i})" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
+
+function addOffer() {
+  offers.push({ site:'', spendThreshold:0, saving:0 });
+  renderOffers();
+}
+
+function updateOffer(i, key, val) {
+  offers[i][key] = val;
+  renderOffers();
+  if (results.length) renderRows();
+}
+
+function removeOffer(i) {
+  offers.splice(i,1);
+  renderOffers();
+  if (results.length) renderRows();
+}
+
+// ── TOGGLES ───────────────────────────────────────────────────────────────────
+
+function tog(which) {
+  const map = { cb:'cbOn', pts:'ptsOn', offers:'offersOn' };
+  const tp  = { cb:'tpCB', pts:'tpPts', offers:'tpOffers' };
+  if (which==='cb')     cbOn     = !cbOn;
+  if (which==='pts')    ptsOn    = !ptsOn;
+  if (which==='offers') offersOn = !offersOn;
+  const pill = document.getElementById(tp[which]);
+  const isOn = which==='cb' ? cbOn : which==='pts' ? ptsOn : offersOn;
+  pill.className = 'tp' + (isOn ? '' : ' off');
+  if (results.length) renderRows();
+}
+</script>
+</body>
+</html>
